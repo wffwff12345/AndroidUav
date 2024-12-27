@@ -1,0 +1,30 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <style name="AppTheme.ActionBarTheme" parent="Widget.AppCompat.Light.ActionBar.Solid.Inverse">
+        <item name="displayOptions">showHome|useLogo|showTitle|homeAsUp</item>
+        <item name="actionOverflowMenuStyle">@style/OverflowMenuStyle</item>
+    </style>
+
+    <style name="OverflowMenuStyle" parent="Widget.AppCompat.PopupMenu.Overflow">
+        <item name="overlapAnchor">true</item>
+        <item name="horizontalOffset">-4dp</item>
+        <item name="verticalOffset">8dp</item>
+    </style>
+    <!-- res/values/styles.xml -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <item name="actionBarTheme">@style/ThemeOverlay.AppCompat.Dark.ActionBar</item>
+    </style>
+
+    <style name="ThemeOverlay.AppCompat.Dark.ActionBar" parent="ThemeOverlay.AppCompat.Dark.ActionBar" tools:ignore="ResourceCycle">
+        <item name="android:actionMenuTextAppearance">@style/ActionMenuTextAppearance</item>
+        <item name="android:actionMenuTextColor">@color/white</item>
+        <item name="actionMenuTextColor">@color/white</item>
+        <item name="android:itemTextAppearance">@style/ActionMenuTextAppearance</item>
+        <item name="showAsAction">ifRoom|withText</item> <!-- 确保图标和文本一起显示 -->
+    </style>
+
+    <style name="ActionMenuTextAppearance" parent="TextAppearance.AppCompat.Widget.ActionBar.Menu">
+        <item name="android:textColor">@color/white</item>
+    </style>
+
+</resources>
