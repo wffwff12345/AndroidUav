@@ -25,6 +25,12 @@
         android:theme="@style/Theme.UAVApplication"
         android:usesCleartextTraffic="true">
         <activity
+            android:name=".SettingActivity"
+            android:exported="false" />
+        <activity
+            android:name=".TaskActivity"
+            android:exported="false" />
+        <activity
             android:name=".CameraActivity"
             android:exported="false" />
         <activity

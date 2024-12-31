@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <group android:checkableBehavior="single">
-       <!-- <item
-            android:id="@+id/nav_home"
-            android:icon="@drawable/ic_home_black_24dp"
-            android:title="@string/menu_home" />-->
+        <!-- <item
+             android:id="@+id/nav_home"
+             android:icon="@drawable/ic_home_black_24dp"
+             android:title="@string/menu_home" />-->
         <item
             android:id="@+id/nav_task1"
             android:title="兵力部署" />
@@ -19,36 +19,39 @@
             android:title="目标列表" />
         <item
             android:id="@+id/nav_task5"
-            android:title="任务清单" />
+            android:title="添加任务" />
         <item
             android:id="@+id/nav_task6"
-            android:title="任务进度" />
+            android:title="任务清单" />
         <item
             android:id="@+id/nav_task7"
-            android:title="通用任务" />
+            android:title="任务进度" />
         <item
             android:id="@+id/nav_task8"
-            android:title="巡逻规划" />
+            android:title="通用任务" />
         <item
             android:id="@+id/nav_task9"
-            android:title="机动任务" />
+            android:title="巡逻规划" />
         <item
             android:id="@+id/nav_task10"
-            android:title="情况上报" />
+            android:title="机动任务" />
         <item
             android:id="@+id/nav_task11"
-            android:title="通讯录" />
+            android:title="情况上报" />
         <item
             android:id="@+id/nav_task12"
-            android:title="通用列表" />
+            android:title="通讯录" />
         <item
             android:id="@+id/nav_task13"
-            android:title="穿戴设备" />
+            android:title="通用列表" />
         <item
             android:id="@+id/nav_task14"
-            android:title="设置" />
+            android:title="穿戴设备" />
         <item
             android:id="@+id/nav_task15"
+            android:title="设置" />
+        <item
+            android:id="@+id/nav_task16"
             android:title="退出登录" />
     </group>
 </menu>

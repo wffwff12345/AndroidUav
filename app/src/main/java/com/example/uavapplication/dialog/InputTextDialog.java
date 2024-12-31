@@ -2,6 +2,7 @@ package com.example.uavapplication.dialog;
 
 import android.content.Context;
 import android.text.InputType;
+import android.util.Log;
 
 import androidx.fragment.app.Fragment;
 
@@ -9,7 +10,6 @@ import com.afollestad.materialdialogs.DialogAction;
 
 /**
  * <p>输入对话框</p>
- *
  */
 public class InputTextDialog extends BaseDialog {
     /**
@@ -20,6 +20,7 @@ public class InputTextDialog extends BaseDialog {
      * 数字键盘
      */
     public static final int KEYBOARD_NUMBER = 2;
+    public static final int KEYBOARD_DECIMAL_NUMBER = 8192;
     /**
      * 标题
      */
@@ -62,6 +63,9 @@ public class InputTextDialog extends BaseDialog {
             inputType(InputType.TYPE_CLASS_TEXT);
         } else if (keyboardType == KEYBOARD_NUMBER) {
             inputType(InputType.TYPE_CLASS_NUMBER);
+        } else if (keyboardType == 8192) {
+            Log.i("setKeyboardType", "setKeyboardType: 8192");
+            inputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         }
     }
 }

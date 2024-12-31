@@ -2,13 +2,18 @@ package com.example.uavapplication.utils;
 
 import android.util.Log;
 
+import com.baidu.mapapi.model.LatLng;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Json操作类：base on jackson <br>
@@ -42,7 +47,23 @@ public class JsonUtils {
 
         return jsonString;
     }
-
+    /**
+     * 将 JSON 字符串转换为 List<T> 对象
+     *
+     * @param jsonString JSON 字符串
+     * @param clazz      目标 JavaBean 类型
+     * @param <T>        泛型类型
+     * @return 转换后的 List<T> 对象
+     */
+    public static <T> List<T> toList(final String jsonString, Class<T> clazz) {
+        List<T> list = null;
+        try {
+            list = objectMapper.readValue(jsonString, objectMapper.getTypeFactory().constructCollectionType(List.class, clazz));
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+        return list;
+    }
     /**
      * 根据Json字符串，转换为JavaBean对象
      *

@@ -179,6 +179,12 @@ public class CoordinateConversionUtils {
         return result;
     }
 
+    // 将百度坐标系（BD09）转换为W84坐标系（Wgs84）
+    public static JSONObject bd09ToWgs84(double bdLat, double bdLon) {
+        JSONObject gcj = bd09ToGcj02(bdLat, bdLon);
+        return gcj02ToWgs84(gcj.getDouble("lng"), gcj.getDouble("lat"));
+    }
+
     /**
      * 判断是否超出中国范围
      *
@@ -208,8 +214,7 @@ public class CoordinateConversionUtils {
     /**
      * 转换纬度
      *
-     * @param
-     * lat 纬度
+     * @param lat 纬度
      * @return 转换后的纬度
      */
     private static double transformLat(double lng, double lat) {
@@ -225,15 +230,14 @@ public class CoordinateConversionUtils {
     /// </summary>
     /// <param name="_Value">度分秒经纬度</param>
     /// <returns>小数经纬度</returns>
-    public static double GPSTransforming(String _Value)
-    {
+    public static double GPSTransforming(String _Value) {
         double Ret = 0.0;
         String[] TempStr = _Value.split("\\.");
         String x = TempStr[0].substring(0, TempStr[0].length() - 2);
         String y = TempStr[0].substring(TempStr[0].length() - 2, TempStr[0].length());
         String z = TempStr[1].substring(0, 5);
-        Double calc = Double.parseDouble(y)+ Double.parseDouble(z)/100000;
-        Ret = Double.parseDouble(x) + calc/60;
+        Double calc = Double.parseDouble(y) + Double.parseDouble(z) / 100000;
+        Ret = Double.parseDouble(x) + calc / 60;
         return Ret;
     }
 

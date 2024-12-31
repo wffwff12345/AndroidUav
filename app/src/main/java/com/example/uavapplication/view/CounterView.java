@@ -97,6 +97,7 @@ public class CounterView extends LinearLayout {
         valueEditText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                Log.i("onEditorAction", "onEditorAction: " + v.getText());
                 if (actionId == EditorInfo.IME_ACTION_DONE) {
                     if (!flag) {
                         notifyValueChanged();
@@ -108,6 +109,7 @@ public class CounterView extends LinearLayout {
             }
         });
         valueEditText.setTextSize(30);
+        valueEditText.setTextColor(ResourcesCompat.getColor(getResources(), R.color.white, null));
         valueEditText.setFocusable(true);
         valueEditText.setFocusableInTouchMode(true);
         valueEditText.setGravity(Gravity.CENTER);
@@ -157,9 +159,10 @@ public class CounterView extends LinearLayout {
                         setEditTextValue(maxValue.toString());
                     }
                 } catch (NumberFormatException e) {
+                    Log.i("onTextChanged", "onTextChanged: " + e.getMessage());
                     e.printStackTrace();
-                    setEditTextValue("0");
-                    notifyValueChanged();
+                    //setEditTextValue("0");
+                    //notifyValueChanged();
                 }
             }
 
@@ -209,7 +212,7 @@ public class CounterView extends LinearLayout {
 
     // 更新文本数据方法
     private void setEditTextValue(String value) {
-        Log.i("valueEditText", "setEditTextValue: " +value);
+        Log.i("valueEditText", "setEditTextValue: " + value);
         valueEditText.setText(value);
         // 将光标移动到文本末尾
         valueEditText.setSelection(valueEditText.getText().length());

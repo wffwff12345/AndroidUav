@@ -26,6 +26,7 @@
             android:elevation="0dp"
             app:insetForeground="@null"
             app:itemTextColor="@color/white"
+            app:itemTextAppearance="@style/NavigationMenuItemStyle"
             app:menu="@menu/activity_main_drawer" />
     </androidx.drawerlayout.widget.DrawerLayout>
 
@@ -52,35 +53,78 @@
             android:clickable="true" />
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_alignParentTop="true"
             android:layout_alignParentRight="true"
-            android:layout_marginTop="5dp"
-            android:layout_marginRight="20dp"
+            android:padding="4dp"
+            android:gravity="center"
             android:orientation="horizontal"
-            android:gravity="center">
-
-            <com.example.uavapplication.view.BatteryView
-                android:id="@+id/horizontalBattery"
-                android:layout_width="30dp"
-                android:layout_height="14dp"
-                android:gravity="center"
-                app:batteryColor="@android:color/white"
-                app:batteryOrientation="horizontal"
-                />
+            android:background="@color/black"
+            android:alpha="0.45">
             <TextView
-                android:id="@+id/txt_battery"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:layout_marginLeft="4dp"
+                android:id="@+id/txt_altitude"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:gravity="center"
-                android:text="100%"
                 android:textColor="@color/white"
-                android:textSize="12sp"
+                android:textSize="24sp"
                 android:textStyle="bold"
-                tools:ignore="InvalidId" />
+                android:layout_marginLeft="12dp"
+                tools:ignore="InvalidId"
+                android:text="飞行高度: 10m"/>
+            <TextView
+                android:id="@+id/txt_mode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:textColor="@color/white"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                tools:ignore="InvalidId"
+                android:layout_marginLeft="20dp"
+                android:layout_marginRight="20dp"
+                android:text="引导模式(GUIDE)"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="right"
+                android:layout_gravity="center"
+                android:orientation="horizontal">
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center">
+                    <Button
+                        android:id="@+id/verticalBattery"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_marginRight="20dp"
+                        android:gravity="center"
+                        android:background="@drawable/ic_solid_satellite_dish"/>
+                    <com.example.uavapplication.view.BatteryView
+                        android:id="@+id/horizontalBattery"
+                        android:layout_width="30dp"
+                        android:layout_height="14dp"
+                        android:gravity="center"
+                        app:batteryColor="@android:color/white"
+                        app:batteryOrientation="horizontal" />
+                    <TextView
+                        android:id="@+id/txt_battery"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_marginLeft="4dp"
+                        android:gravity="center"
+                        android:text="100%"
+                        android:textColor="@color/white"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        tools:ignore="InvalidId" />
+                </LinearLayout>
+            </LinearLayout>
+
         </LinearLayout>
+
         <LinearLayout
             android:id="@+id/left_action_view"
             android:layout_width="50dp"
@@ -182,26 +226,29 @@
             android:layout_alignParentRight="true"
             android:layout_centerVertical="true"
             android:layout_marginRight="20dp"
-            android:orientation="vertical"
-            android:gravity="center"
             android:alpha="0.8"
-            android:background="@drawable/btn_shape_way_point">
+            android:background="@drawable/btn_shape_way_point"
+            android:gravity="center"
+            android:orientation="vertical">
+
             <Button
                 android:id="@+id/btn_layers"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
+                android:layout_marginBottom="30dp"
                 android:alpha="0.8"
                 android:background="@drawable/ic_layers"
-                android:textColor="@color/white"
-                android:layout_marginBottom="30dp"/>
+                android:textColor="@color/white" />
+
             <Button
                 android:id="@+id/btn_way_point"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:alpha="0.8"
                 android:background="@drawable/ic_way_point2"
-                android:textColor="@color/white"/>
+                android:textColor="@color/white" />
         </LinearLayout>
+
         <com.google.android.exoplayer2.ui.PlayerView
             android:id="@+id/videoPlayerView"
             android:layout_width="150dp"
@@ -329,6 +376,19 @@
                 android:alpha="0.5"
                 android:background="@drawable/btn_shape_btn"
                 android:text="红外/可见光"
+                android:textColor="@color/white"
+                android:textSize="30sp" />
+
+            <Button
+                android:id="@+id/camera_ip"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/light"
+                android:layout_marginTop="100dp"
+                android:layout_marginRight="20dp"
+                android:alpha="0.5"
+                android:background="@drawable/btn_shape_btn"
+                android:text="云台地址"
                 android:textColor="@color/white"
                 android:textSize="30sp" />
         </LinearLayout>

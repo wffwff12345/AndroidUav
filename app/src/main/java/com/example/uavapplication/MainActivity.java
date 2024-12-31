@@ -1,6 +1,8 @@
 package com.example.uavapplication;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
@@ -20,12 +22,15 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -53,17 +58,24 @@ import com.example.uavapplication.dialog.ConfirmDialog;
 import com.example.uavapplication.dialog.DialogEvent;
 import com.example.uavapplication.dialog.InputTextDialog;
 import com.example.uavapplication.dialog.ListDialog;
+import com.example.uavapplication.menu.MessageMenu;
 import com.example.uavapplication.model.Command;
 import com.example.uavapplication.model.UavEntity;
 import com.example.uavapplication.model.UavVehicle;
 import com.example.uavapplication.utils.CoordinateConversionUtils;
 import com.example.uavapplication.utils.JsonUtils;
+import com.example.uavapplication.utils.LatLngDeserializer;
+import com.example.uavapplication.utils.ModeUtils;
 import com.example.uavapplication.utils.SPUtils;
 import com.example.uavapplication.utils.ToastUtils;
 import com.example.uavapplication.view.BatteryView;
 import com.example.uavapplication.view.CounterView;
 import com.example.uavapplication.websocket.WebSocketEvent;
 import com.example.uavapplication.websocket.WebSocketService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.ui.PlayerView;
@@ -90,6 +102,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private LinearLayout leftView;
 
     private Handler handler = new Handler();
+
+    private TextView txt_altitude;
+
+    private TextView txt_mode;
 
     private BatteryView horizontalBattery;
 
@@ -127,6 +143,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private Button btn_way_point;
 
+    private Button camera_ip;
+
     private Intent bindIntent;
 
     private Handler wsHandler = new Handler();
@@ -141,7 +159,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     // 0:上锁 1:解锁
     private static int light = 0; // 0:红外线 1:可见光
 
-    private static final int MODE = 0, TAKEOFF = 1, DOUBLETAKEOFF = 2, LAND = 3, LAUNCH = 4, EXTTASK = 5;
+    private static final int MODE = 0, TAKEOFF = 1, DOUBLETAKEOFF = 2, LAND = 3, LAUNCH = 4, EXTTASK = 5, LOGOUT = 6, CAMERAIP = 7;
 
     private UavEntity uav;
 
@@ -170,6 +188,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private ExoPlayer player2;
 
     private boolean isFullScreen = false;
+
+    private String url = "http://223.112.179.125:23081/hls/stream2.m3u8";
 
     private Uri videoUri;
 
@@ -201,9 +221,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private int yawValue; // 偏航角
 
+    private ActivityResultLauncher activityResultLauncher;
+
+    private List<LatLng> taskPoints = new ArrayList<>();
+
+    private boolean taskFlag = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -244,12 +271,28 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mMapView.onResume();
         player = new ExoPlayer.Builder(this).build();
         videoView.setPlayer(player);
+        String cameraIp = SPUtils.get("cameraIp", this);
+        if (cameraIp != null) {
+            videoUri = Uri.parse(cameraIp);
+            mediaItem = MediaItem.fromUri(videoUri);
+        }
         player.setMediaItem(mediaItem);
         player.prepare();
         player.play();
         if (isFullScreen) {
-            changeView(false);
+           /* Log.i(TAG, "onResume: ");
+            mainRelativeLayout.setVisibility(View.GONE);
+                *//*btn_left_act.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_right5, null));
+                drawLayout.setVisibility(View.GONE);
+                drawLayout.closeDrawer(GravityCompat.START);
+                leftActFlag = true;*//*
+            fullCameraView.setVisibility(View.VISIBLE);
+            counterView.setMinValue(BigDecimal.ZERO);
+            counterView.setMaxValue(new BigDecimal(100));
+            counterView.setIncrement(BigDecimal.ONE);
+            counterView.setDefaultValue(BigDecimal.valueOf(50));*/
         }
+        Log.i(TAG, "onResume: " + "isFullScreen: " + isFullScreen);
     }
 
     @Override
@@ -268,7 +311,33 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void initView() {
         EventBus.getDefault().register(this);
+
+        activityResultLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+            if (result.getResultCode() == Activity.RESULT_OK) {
+                Intent data = result.getData();
+                ObjectMapper objectMapper = new ObjectMapper();
+                SimpleModule module = new SimpleModule();
+                module.addDeserializer(LatLng.class, new LatLngDeserializer());
+                objectMapper.registerModule(module);
+
+                try {
+                    taskPoints = objectMapper.readValue(data.getStringExtra("polyLinePoints"), new TypeReference<List<LatLng>>() {
+                    });
+                    if (taskPoints != null && taskPoints.size() > 0) {
+                        addTask(taskPoints);
+                    }
+                } catch (JsonProcessingException e) {
+                    e.printStackTrace();
+                    Log.i(TAG, "initView: error" + e.getMessage());
+                }
+            }
+        });
+
         mainRelativeLayout = findViewById(R.id.main_relative);
+
+        txt_altitude = findViewById(R.id.txt_altitude);
+
+        txt_mode = findViewById(R.id.txt_mode);
 
         horizontalBattery = findViewById(R.id.horizontalBattery);
         horizontalBattery.setPower(100);
@@ -330,6 +399,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         btn_light = findViewById(R.id.light);
         btn_light.setOnClickListener(this);
 
+        camera_ip = findViewById(R.id.camera_ip);
+        camera_ip.setOnClickListener(this);
+
         counterView = findViewById(R.id.zoom_counter_view);
         counterView.setMinValue(BigDecimal.ZERO);
         counterView.setMaxValue(new BigDecimal(100));
@@ -352,7 +424,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         videoView2 = findViewById(R.id.videoPlayerView2);
         videoView2.setUseController(false);
 
-        videoUri = Uri.parse("http://223.112.179.125:23081/hls/stream2.m3u8");
+        SPUtils.set("cameraIp", url, this);
+        videoUri = Uri.parse(url);
         mediaItem = MediaItem.fromUri(videoUri);
 
         videoView.setOnClickListener(new View.OnClickListener() {
@@ -379,6 +452,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         mMapView.removeViewAt(1);
         mBaiduMap = mMapView.getMap();
+        mBaiduMap.setOnMapLongClickListener(new BaiduMap.OnMapLongClickListener() {
+            @Override
+            public void onMapLongClick(LatLng latLng) {
+                Log.i(TAG, "onMapLongClick: " + latLng.toString());
+            }
+        });
         //卫星地图
         mBaiduMap.setMapType(BaiduMap.MAP_TYPE_SATELLITE);
         ld = new LoadingDialog(this);
@@ -405,15 +484,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 player.release();
                 player = null;
             }
+            if (player2 != null) {
+                player2.release();
+                player2 = null;
+            }
             player2 = new ExoPlayer.Builder(this).build();
             videoView2.setPlayer(player2);
-            //videoView2.setPlayer(player);
-
+            String cameraIp = SPUtils.get("cameraIp", this);
+            if (cameraIp != null) {
+                videoUri = Uri.parse(cameraIp);
+                mediaItem = MediaItem.fromUri(videoUri);
+            }
             player2.setMediaItem(mediaItem);
             player2.prepare();
             player2.play();
         }
         isFullScreen = !isFullScreen;
+        SPUtils.setBoolean(SpConstant.IS_FULL_SCREEN, isFullScreen, this);
     }
 
     private boolean onNavigationItemSelected(MenuItem item) {
@@ -432,6 +519,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.nav_task5:
                 ToastUtils.toast(this, item.getTitle().toString());
+                Intent intent = new Intent(MainActivity.this, TaskActivity.class);
+                intent.putExtra("startPoint", startPoint);
+                //startActivity(intent);
+                activityResultLauncher.launch(intent);
                 break;
             case R.id.nav_task6:
                 ToastUtils.toast(this, item.getTitle().toString());
@@ -462,6 +553,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.nav_task15:
                 ToastUtils.toast(this, item.getTitle().toString());
+                break;
+            case R.id.nav_task16:
+                ConfirmDialog logoutDialog = new ConfirmDialog(MainActivity.this, LOGOUT, "退出", "确定退出登录？", false);
+                logoutDialog.show();
                 break;
             default:
                 break;
@@ -497,24 +592,34 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (event != null) {
             String msg = event.getMessage();
             Log.i(TAG, "onMessageEvent: " + msg);
-            uavVehicle = JsonUtils.toBean(msg, UavVehicle.class);
-            if (polyLinePoints.size() >= 2) {
-                updateShowLines(uavVehicle);
-            } else {
-                if (uavVehicle.getVehicleLong() != null && uavVehicle.getVehicleLat() != null) {
-                    JSONObject position = CoordinateConversionUtils.wgs84ToBd09(uavVehicle.getVehicleLong(), uavVehicle.getVehicleLat());
-                    String strLat = position.getString("lat");
-                    String strLng = position.getString("lng");
-                    latLng = new LatLng(Double.parseDouble(strLat), Double.parseDouble(strLng));
-                    if (polyLinePoints.size() > 2) {
-                        zoomFlag = !zoomFlag;
+            String[] msgs = msg.split("#");
+            if (msgs.length > 1) {
+                if (msgs[0].equals(MessageMenu.VEHICLEINFO.value())) {
+                    uavVehicle = JsonUtils.toBean(msgs[1], UavVehicle.class);
+                    if (uavVehicle != null) {
+                        if (polyLinePoints.size() >= 2) {
+                            startPoint = new LatLng(polyLinePoints.get(0).latitude, polyLinePoints.get(0).longitude);
+                            updateShowLines(uavVehicle);
+                        } else {
+                            if (uavVehicle.getVehicleLong() != null && uavVehicle.getVehicleLat() != null) {
+                                JSONObject position = CoordinateConversionUtils.wgs84ToBd09(uavVehicle.getVehicleLong(), uavVehicle.getVehicleLat());
+                                String strLat = position.getString("lat");
+                                String strLng = position.getString("lng");
+                                latLng = new LatLng(Double.parseDouble(strLat), Double.parseDouble(strLng));
+                                if (polyLinePoints.size() > 2) {
+                                    zoomFlag = !zoomFlag;
+                                }
+                                runOnUiThread(() -> {
+                                    txt_altitude.setText("飞行高度: " + uavVehicle.getVehicleAlt() + "m");
+                                    horizontalBattery.setPower(uavVehicle.getVehicleSoc());
+                                    txt_battery.setText(uavVehicle.getVehicleSoc() + "%");
+                                    txt_mode.setText(ModeUtils.getMode(uavVehicle.getCustomMode()));
+                                });
+                            }
+                            polyLinePoints.add(latLng);
+                        }
                     }
-                    runOnUiThread(() -> {
-                        horizontalBattery.setPower(uavVehicle.getVehicleSoc());
-                        txt_battery.setText(uavVehicle.getVehicleSoc() + "%");
-                    });
                 }
-                polyLinePoints.add(latLng);
             }
         }
     }
@@ -553,7 +658,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 sendMsg("LOCKORUNLOCK#" + lock);
                 break;
             case R.id.setMode:
-                ListDialog listDialog = new ListDialog(MainActivity.this, MODE, "请选择模式", Arrays.asList("0:稳定模式(STABILIZE)", "3:自动模式(AUTO)", "4:导航模式(GUIDE)", "6:返航模式(RTL)", "9:降落模式(LAND)"));
+                ListDialog listDialog = new ListDialog(MainActivity.this, MODE, "请选择模式", Arrays.asList("0:稳定模式(STABILIZE)", "3:自动模式(AUTO)", "4:引导模式(GUIDE)", "6:返航模式(RTL)", "9:降落模式(LAND)"));
                 listDialog.show();
                 break;
             case R.id.takeOff:
@@ -569,8 +674,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 launchDialog.show();
                 break;
             case R.id.startMission:
-                ConfirmDialog startMissionDialog = new ConfirmDialog(MainActivity.this, EXTTASK, "执行任务", "确定执行任务？", false);
-                startMissionDialog.show();
+                if(taskPoints.size() > 0 ){
+                    ConfirmDialog startMissionDialog = new ConfirmDialog(MainActivity.this, 11, "执行任务", "当前任务正在上报中....", true);
+                    startMissionDialog.show();
+                } else {
+                    if(taskFlag){
+                        ConfirmDialog startMissionDialog2 = new ConfirmDialog(MainActivity.this, EXTTASK, "执行任务", "确定执行任务？", false);
+                        startMissionDialog2.show();
+                    }
+                }
                 break;
             case R.id.btn_way_point:
                 if (polyLinePoints != null && !polyLinePoints.isEmpty() && polyLinePoints.size() > 2) {
@@ -586,17 +698,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.camera_back:
                 changeView(true);
-                if (player == null) {
-                    player = new ExoPlayer.Builder(this).build();
-                    videoView.setPlayer(player);
-                    player.setMediaItem(mediaItem);
-                    player.prepare();
-                    player.play();
+                if (player != null) {
+                    player.release();
+                    player = null;
                 }
-                if (player2 != null) {
-                    player2.release();
-                    player2 = null;
-                }
+                videoUri = Uri.parse(SPUtils.get("cameraIp", this));
+                mediaItem = MediaItem.fromUri(videoUri);
+                player = new ExoPlayer.Builder(this).build();
+                videoView.setPlayer(player);
+                player.setMediaItem(mediaItem);
+                player.prepare();
+                player.play();
+
+                isFullScreen = !isFullScreen;
                 break;
             case R.id.camera_up:
                 camreaContral(5, 0);
@@ -622,6 +736,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     btn_light.setText("红外线");
                 }
                 break;
+            case R.id.camera_ip:
+                InputTextDialog cameraIpDialog = new InputTextDialog(MainActivity.this, CAMERAIP, "请输入IP地址");
+                cameraIpDialog.show();
+                break;
             default:
                 break;
         }
@@ -641,10 +759,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (event.getWhich() == DialogAction.POSITIVE) {
             if (event.getCalledByViewId() == MODE) {
                 sendMsg("MODE#" + resultValue.split(":")[0]);
+                runOnUiThread(() -> {
+                    SPUtils.set(SpConstant.UAVMODE, resultValue.split(":")[0], this);
+                    txt_mode.setText(resultValue.split(":")[1]);
+                });
             } else if (event.getCalledByViewId() == TAKEOFF) {
                 InputTextDialog takeOffDialog = new InputTextDialog(MainActivity.this, DOUBLETAKEOFF
                         , "请输入起飞高度");
-                takeOffDialog.setKeyboardType(2);
+                takeOffDialog.setKeyboardType(8192);
                 takeOffDialog.show();
             } else if (event.getCalledByViewId() == DOUBLETAKEOFF) {
                 sendMsg("TAKEOFF#" + resultValue);
@@ -653,7 +775,31 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             } else if (event.getCalledByViewId() == LAUNCH) {
                 sendMsg("LAUNCH#LAUNCH");
             } else if (event.getCalledByViewId() == EXTTASK) {
-                sendMsg("STARTMISSION#STARTMISSION");
+                if (taskPoints != null && !taskPoints.isEmpty() && taskFlag == true) {
+                    sendMsg("STARTMISSION#STARTMISSION");
+                    taskFlag = false;
+                }
+            } else if (event.getCalledByViewId() == LOGOUT) {
+                onDestroy();
+                Intent intent = new Intent(MainActivity.this, FirstActivity.class);
+                startActivity(intent);
+                finish();
+            } else if (event.getCalledByViewId() == CAMERAIP) {
+                SPUtils.set("cameraIp", resultValue, this);
+                if (player2 != null) {
+                    player2.release();
+                    player2 = null;
+                }
+                player2 = new ExoPlayer.Builder(this).build();
+                videoView2.setPlayer(player2);
+                String cameraIp = SPUtils.get("cameraIp", this);
+                if (cameraIp != null) {
+                    videoUri = Uri.parse(cameraIp);
+                    mediaItem = MediaItem.fromUri(videoUri);
+                }
+                player2.setMediaItem(mediaItem);
+                player2.prepare();
+                player2.play();
             }
         }
     }
@@ -786,10 +932,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             btn_startTask.setVisibility(View.GONE);*/
             runOnUiThread(() -> {
                 mainRelativeLayout.setVisibility(View.GONE);
-                /*btn_left_act.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_right5, null));
+                btn_left_act.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_left, null));
                 drawLayout.setVisibility(View.GONE);
                 drawLayout.closeDrawer(GravityCompat.START);
-                leftActFlag = true;*/
+                leftActFlag = false;
                 fullCameraView.setVisibility(View.VISIBLE);
                 counterView.setMinValue(BigDecimal.ZERO);
                 counterView.setMaxValue(new BigDecimal(100));
@@ -823,6 +969,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     public void wayPoint() {
+    }
+
+    private void addTask(List<LatLng> list) {
+        for (LatLng lng : list) {
+            JSONObject jsonObject = CoordinateConversionUtils.bd09ToWgs84(lng.longitude, lng.latitude);
+            sendMsg("ADDMISSION" + "#" + jsonObject.getString("lat") + "," + jsonObject.getString("lng"));
+        }
+        taskPoints.clear();
+        taskFlag = true;
     }
 
     public void mapCompass(boolean flag) {

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".TaskActivity">
+    <Button
+        android:id="@+id/btn_task_back"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginLeft="5dp"
+        android:background="@drawable/back"/>
+    <Button
+        android:id="@+id/btn_add_task"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_centerVertical="true"
+        android:layout_marginLeft="50dp"
+        android:alpha="0.8"
+        android:background="@drawable/btn_shape_btn"
+        android:text="添加任务"
+        android:textColor="@color/white"
+        android:textSize="30sp" />
+
+    <com.baidu.mapapi.map.MapView
+        android:id="@+id/bmapTaskView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="true" />
+    <LinearLayout
+        android:layout_width="50dp"
+        android:layout_height="140dp"
+        android:layout_alignParentRight="true"
+        android:layout_centerVertical="true"
+        android:layout_marginRight="20dp"
+        android:alpha="0.8"
+        android:background="@drawable/btn_shape_way_point"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <Button
+            android:id="@+id/btn_task_zoom_layers"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginBottom="30dp"
+            android:alpha="0.8"
+            android:background="@drawable/ic_layers"
+            android:textColor="@color/white" />
+
+        <Button
+            android:id="@+id/btn_task_way_point"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:alpha="0.8"
+            android:background="@drawable/ic_way_point2"
+            android:textColor="@color/white" />
+    </LinearLayout>
+</RelativeLayout>

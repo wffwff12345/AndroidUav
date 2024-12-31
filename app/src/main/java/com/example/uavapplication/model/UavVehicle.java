@@ -22,7 +22,7 @@ public class UavVehicle implements java.io.Serializable
     private String mac;
 
     /** 无人机速度 km/h */
-    private Float vehicleSpeed;
+    private Double vehicleSpeed;
 
     /** 无人机电量 */
     private Integer vehicleSoc;
@@ -34,7 +34,10 @@ public class UavVehicle implements java.io.Serializable
     private Double vehicleLat;
 
     /** 无人机海拔高度 */
-    private Float vehicleAlt;
+    private Double vehicleAlt;
+
+    /** 无人机当前模式 */
+    private Long customMode;
 
     /** 错误信息 */
     private Integer faultInfo;
