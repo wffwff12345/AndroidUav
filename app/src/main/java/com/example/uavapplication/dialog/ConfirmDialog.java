@@ -8,7 +8,6 @@ import com.afollestad.materialdialogs.DialogAction;
 
 /**
  * <p>确认框</p>
- *
  */
 public class ConfirmDialog extends BaseDialog {
     /**
@@ -29,6 +28,8 @@ public class ConfirmDialog extends BaseDialog {
      */
     private boolean isSingleButton;
 
+    private int position = -1;
+
     public ConfirmDialog(Context context, int calledByViewId, String title, String content, boolean isSingleButton) {
         super(context);
         this.context = context;
@@ -44,10 +45,18 @@ public class ConfirmDialog extends BaseDialog {
         setResult(fragment);
     }
 
+    public ConfirmDialog(Context context, int calledByViewId, String title, String content, boolean isSingleButton, int position) {
+        this(context, calledByViewId, title, content, isSingleButton);
+        this.position = position;
+    }
+
     private void initialize() {
         title(title);
         content(content);
         positiveText("确定");
+        if (position != -1) {
+            onPositive((dialog, which) -> onResultClick(DialogAction.POSITIVE, String.valueOf(this.position)));
+        }
         onPositive((dialog, which) -> onResultClick(DialogAction.POSITIVE));
         if (isSingleButton == false) {
             negativeText("取消");

@@ -4,12 +4,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".TaskActivity">
+
     <Button
         android:id="@+id/btn_task_back"
         android:layout_width="50dp"
         android:layout_height="50dp"
         android:layout_marginLeft="5dp"
-        android:background="@drawable/back"/>
+        android:background="@drawable/back" />
+
     <Button
         android:id="@+id/btn_add_task"
         android:layout_width="wrap_content"
@@ -28,7 +30,20 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clickable="true" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv"
+        android:layout_width="160dp"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_toLeftOf="@+id/task_layout"
+        android:layout_marginRight="20dp"
+        android:alpha="0.8"
+        android:background="@color/gray"
+        android:visibility="gone" />
+
     <LinearLayout
+        android:id="@+id/task_layout"
         android:layout_width="50dp"
         android:layout_height="140dp"
         android:layout_alignParentRight="true"

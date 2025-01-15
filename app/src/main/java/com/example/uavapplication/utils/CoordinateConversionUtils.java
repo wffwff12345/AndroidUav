@@ -180,8 +180,8 @@ public class CoordinateConversionUtils {
     }
 
     // 将百度坐标系（BD09）转换为W84坐标系（Wgs84）
-    public static JSONObject bd09ToWgs84(double bdLat, double bdLon) {
-        JSONObject gcj = bd09ToGcj02(bdLat, bdLon);
+    public static JSONObject bd09ToWgs84(double bdLon, double bdLat) {
+        JSONObject gcj = bd09ToGcj02(bdLon, bdLat);
         return gcj02ToWgs84(gcj.getDouble("lng"), gcj.getDouble("lat"));
     }
 

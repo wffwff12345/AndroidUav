@@ -1,6 +1,4 @@
 package com.example.uavapplication.websocket;
-
-
 import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.Service;
@@ -10,18 +8,15 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
-
 import androidx.annotation.Nullable;
-
 import com.example.uavapplication.constant.SpConstant;
-import com.example.uavapplication.model.UavEntity;
+import com.example.uavapplication.http.Constant;
+import com.example.uavapplication.model.UavVehicleInfo;
 import com.example.uavapplication.utils.JsonUtils;
 import com.example.uavapplication.utils.SPUtils;
 import com.example.uavapplication.utils.ToastUtils;
-
 import org.greenrobot.eventbus.EventBus;
 import org.java_websocket.handshake.ServerHandshake;
-
 import java.io.Serializable;
 import java.net.URI;
 
@@ -45,13 +40,14 @@ public class WebSocketService extends Service implements Serializable {
      */
     private JWebSocketClientBinder binder = new JWebSocketClientBinder();
     private String authorization = "";
-    private UavEntity uav;
+    private UavVehicleInfo uav;
 
     /**
      * activity和service之间通讯
      */
-    public class JWebSocketClientBinder extends Binder implements Serializable{
+    public class JWebSocketClientBinder extends Binder implements Serializable {
         private static final long serialVersionUID = 1L;
+
         public WebSocketService getService() {
             return WebSocketService.this;
         }
@@ -114,8 +110,10 @@ public class WebSocketService extends Service implements Serializable {
      * 初始化Socket
      */
     private void initSocketClient() {
-        uav = JsonUtils.toBean(SPUtils.get(SpConstant.UAV, this), UavEntity.class);
-        String websocketUrl = "ws://" + uav.getIp() + ":" + uav.getPort() + "/websocket/app/" + uav.getId();
+        String websocketUrl = "";
+        uav = JsonUtils.toBean(SPUtils.get(SpConstant.UAV, this), UavVehicleInfo.class);
+        Log.i(TAG, "initSocketClient: "+uav.toString());
+        websocketUrl = "ws://" + Constant.WEBSOCKET_API_URL + "/websocket/app/" + uav.getSysId();
         URI uri = URI.create(websocketUrl);
         client = new JWebSocketClient(uri) {
             @Override

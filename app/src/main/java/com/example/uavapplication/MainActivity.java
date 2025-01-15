@@ -2,7 +2,6 @@ package com.example.uavapplication;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
@@ -60,8 +59,9 @@ import com.example.uavapplication.dialog.InputTextDialog;
 import com.example.uavapplication.dialog.ListDialog;
 import com.example.uavapplication.menu.MessageMenu;
 import com.example.uavapplication.model.Command;
-import com.example.uavapplication.model.UavEntity;
+import com.example.uavapplication.model.LatLngDto;
 import com.example.uavapplication.model.UavVehicle;
+import com.example.uavapplication.model.UavVehicleInfo;
 import com.example.uavapplication.utils.CoordinateConversionUtils;
 import com.example.uavapplication.utils.JsonUtils;
 import com.example.uavapplication.utils.LatLngDeserializer;
@@ -91,6 +91,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
     private static final String TAG = "MainActivity";
@@ -161,7 +162,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private static final int MODE = 0, TAKEOFF = 1, DOUBLETAKEOFF = 2, LAND = 3, LAUNCH = 4, EXTTASK = 5, LOGOUT = 6, CAMERAIP = 7;
 
-    private UavEntity uav;
+    private UavVehicleInfo uav;
 
     private List<LinkedHashMap<String, Object>> mapList;
 
@@ -223,7 +224,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private ActivityResultLauncher activityResultLauncher;
 
-    private List<LatLng> taskPoints = new ArrayList<>();
+    private List<LatLngDto> taskPoints = new ArrayList<>();
 
     private boolean taskFlag = false;
 
@@ -249,8 +250,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
         setContentView(R.layout.activity_main);
-        uav = (UavEntity) getIntent().getExtras().get("uav");
-        if (uav != null && uav.getIp() != null) {
+        uav = (UavVehicleInfo) getIntent().getExtras().get("uav");
+        if (uav != null && "1".equals(uav.getVehicleStatus())) {
             SPUtils.set(SpConstant.UAV, JsonUtils.toJson(uav), this);
             startWebSocketService();
         }
@@ -321,8 +322,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 objectMapper.registerModule(module);
 
                 try {
-                    taskPoints = objectMapper.readValue(data.getStringExtra("polyLinePoints"), new TypeReference<List<LatLng>>() {
+                    taskPoints = objectMapper.readValue(data.getStringExtra("polyLinePoints"), new TypeReference<List<LatLngDto>>() {
                     });
+                    Log.i(TAG, "initView: taskPoints" + taskPoints);
                     if (taskPoints != null && taskPoints.size() > 0) {
                         addTask(taskPoints);
                     }
@@ -340,7 +342,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         txt_mode = findViewById(R.id.txt_mode);
 
         horizontalBattery = findViewById(R.id.horizontalBattery);
-        horizontalBattery.setPower(100);
+        horizontalBattery.setPower(85);
 
         txt_battery = findViewById(R.id.txt_battery);
 
@@ -596,29 +598,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             if (msgs.length > 1) {
                 if (msgs[0].equals(MessageMenu.VEHICLEINFO.value())) {
                     uavVehicle = JsonUtils.toBean(msgs[1], UavVehicle.class);
-                    if (uavVehicle != null) {
+                    if (uavVehicle.getVehicleLong() != null && uavVehicle.getVehicleLat() != null && uavVehicle.getVehicleLong() != 0.0 && uavVehicle.getVehicleLat() != 0.0) {
+                        JSONObject position = CoordinateConversionUtils.wgs84ToBd09(uavVehicle.getVehicleLong(), uavVehicle.getVehicleLat());
+                        String strLat = position.getString("lat");
+                        String strLng = position.getString("lng");
+                        latLng = new LatLng(Double.parseDouble(strLat), Double.parseDouble(strLng));
+                        polyLinePoints.add(latLng);
                         if (polyLinePoints.size() >= 2) {
                             startPoint = new LatLng(polyLinePoints.get(0).latitude, polyLinePoints.get(0).longitude);
                             updateShowLines(uavVehicle);
-                        } else {
-                            if (uavVehicle.getVehicleLong() != null && uavVehicle.getVehicleLat() != null) {
-                                JSONObject position = CoordinateConversionUtils.wgs84ToBd09(uavVehicle.getVehicleLong(), uavVehicle.getVehicleLat());
-                                String strLat = position.getString("lat");
-                                String strLng = position.getString("lng");
-                                latLng = new LatLng(Double.parseDouble(strLat), Double.parseDouble(strLng));
-                                if (polyLinePoints.size() > 2) {
-                                    zoomFlag = !zoomFlag;
-                                }
-                                runOnUiThread(() -> {
-                                    txt_altitude.setText("飞行高度: " + uavVehicle.getVehicleAlt() + "m");
-                                    horizontalBattery.setPower(uavVehicle.getVehicleSoc());
-                                    txt_battery.setText(uavVehicle.getVehicleSoc() + "%");
-                                    txt_mode.setText(ModeUtils.getMode(uavVehicle.getCustomMode()));
-                                });
-                            }
-                            polyLinePoints.add(latLng);
                         }
                     }
+                    runOnUiThread(() -> {
+                        txt_altitude.setText("飞行高度: " + uavVehicle.getVehicleAlt() + "m");
+                        horizontalBattery.setPower(uavVehicle.getVehicleSoc());
+                        txt_battery.setText(uavVehicle.getVehicleSoc() + "%");
+                        txt_mode.setText(ModeUtils.getMode(uavVehicle.getCustomMode()));
+                    });
                 }
             }
         }
@@ -674,13 +670,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 launchDialog.show();
                 break;
             case R.id.startMission:
-                if(taskPoints.size() > 0 ){
+                if (taskPoints.size() > 0) {
                     ConfirmDialog startMissionDialog = new ConfirmDialog(MainActivity.this, 11, "执行任务", "当前任务正在上报中....", true);
                     startMissionDialog.show();
+                    Log.i(TAG, "onClick: startMission");
                 } else {
-                    if(taskFlag){
+                    if (taskFlag) {
                         ConfirmDialog startMissionDialog2 = new ConfirmDialog(MainActivity.this, EXTTASK, "执行任务", "确定执行任务？", false);
                         startMissionDialog2.show();
+                        Log.i(TAG, "onClick: not startMission");
                     }
                 }
                 break;
@@ -775,7 +773,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             } else if (event.getCalledByViewId() == LAUNCH) {
                 sendMsg("LAUNCH#LAUNCH");
             } else if (event.getCalledByViewId() == EXTTASK) {
-                if (taskPoints != null && !taskPoints.isEmpty() && taskFlag == true) {
+                if (taskPoints != null && taskPoints.size() == 0 && taskFlag == true) {
                     sendMsg("STARTMISSION#STARTMISSION");
                     taskFlag = false;
                 }
@@ -946,36 +944,41 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     public void updateShowLines(UavVehicle uavVehicle) {
-        if (uavVehicle.getVehicleLong() != null && uavVehicle.getVehicleLat() != null) {
+        /*if (uavVehicle.getVehicleLong() != null && uavVehicle.getVehicleLat() != null) {
             JSONObject position = CoordinateConversionUtils.wgs84ToBd09(uavVehicle.getVehicleLong(), uavVehicle.getVehicleLat());
             String strLat = position.getString("lat");
             String strLng = position.getString("lng");
             latLng = new LatLng(Double.parseDouble(strLat), Double.parseDouble(strLng));
-        }
+        }*/
         if (currentMarker != null) {
             currentMarker.remove();
         }
-        polyLinePoints.add(latLng);
+        //polyLinePoints.add(latLng);
         polylineOptions.points(polyLinePoints);
         options = new MarkerOptions().icon(resizedDescriptor).position(latLng).anchor(0.5f, 0.5f);
         mBaiduMap.clear();
         currentMarker = (Marker) mBaiduMap.addOverlay(options);
         mBaiduMap.addOverlay(polylineOptions);
         mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLngZoom(polyLinePoints.get(0), 19.0f));
-        if (zoomFlag) {
+        /*if (zoomFlag) {
             mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLngZoom(polyLinePoints.get(0), 19.0f));
             zoomFlag = !zoomFlag;
-        }
+        }*/
     }
 
     public void wayPoint() {
     }
 
-    private void addTask(List<LatLng> list) {
-        for (LatLng lng : list) {
-            JSONObject jsonObject = CoordinateConversionUtils.bd09ToWgs84(lng.longitude, lng.latitude);
-            sendMsg("ADDMISSION" + "#" + jsonObject.getString("lat") + "," + jsonObject.getString("lng"));
-        }
+    private void addTask(List<LatLngDto> list) {
+        List<LatLngDto> objects = list.stream()
+                .map(lng -> {
+                    JSONObject jsonObject = CoordinateConversionUtils.bd09ToWgs84(lng.getLng(),lng.getLat());
+                    lng.setLat(jsonObject.getDouble("lat"));
+                    lng.setLng(jsonObject.getDouble("lng"));
+                    return lng;
+                })
+                .collect(Collectors.toList());
+        sendMsg("ADDMISSION" + "#" + JsonUtils.toJson(objects));
         taskPoints.clear();
         taskFlag = true;
     }

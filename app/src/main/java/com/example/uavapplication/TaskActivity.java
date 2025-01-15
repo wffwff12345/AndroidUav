@@ -8,10 +8,16 @@ import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.res.ResourcesCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.afollestad.materialdialogs.DialogAction;
 import com.baidu.mapapi.map.BaiduMap;
@@ -24,9 +30,13 @@ import com.baidu.mapapi.map.Marker;
 import com.baidu.mapapi.map.MarkerOptions;
 import com.baidu.mapapi.map.PolylineOptions;
 import com.baidu.mapapi.model.LatLng;
+import com.example.uavapplication.adapter.TaskItemRecyclerViewAdapter;
 import com.example.uavapplication.dialog.ConfirmDialog;
 import com.example.uavapplication.dialog.DialogEvent;
+import com.example.uavapplication.dialog.TaskDetailDialog;
+import com.example.uavapplication.model.LatLngDto;
 import com.example.uavapplication.utils.JsonUtils;
+import com.example.uavapplication.utils.StringUtils;
 import com.xiasuhuei321.loadingdialog.view.LoadingDialog;
 
 import org.greenrobot.eventbus.EventBus;
@@ -62,6 +72,7 @@ public class TaskActivity extends AppCompatActivity implements View.OnClickListe
     private BitmapDescriptor resizedDescriptor;
 
     private int ADDTASK = 101;
+    private int DELTASK = 102;
 
     private List<LatLng> polyLinePoints;
 
@@ -69,6 +80,15 @@ public class TaskActivity extends AppCompatActivity implements View.OnClickListe
 
     private MarkerOptions options;
 
+    private RecyclerView recyclerView;
+
+    private TaskItemRecyclerViewAdapter recyclerViewAdapter;
+
+    private List<String> data = new ArrayList<>();
+
+    private LinearLayout task_layout;
+
+    private List<LatLngDto> taskPoints = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,6 +107,29 @@ public class TaskActivity extends AppCompatActivity implements View.OnClickListe
         EventBus.getDefault().register(this);
         btn_task_backck = findViewById(R.id.btn_task_back);
         btn_task_backck.setOnClickListener(this);
+
+        task_layout = findViewById(R.id.task_layout);
+
+        recyclerView = findViewById(R.id.rv);
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
+        recyclerView.setLayoutManager(linearLayoutManager);
+        recyclerViewAdapter = new TaskItemRecyclerViewAdapter(R.layout.recyclerview_item, data);
+        recyclerViewAdapter.setOnItemClickListener((adapter, view, position) -> {
+            TaskDetailDialog detailDialog = new TaskDetailDialog(this, taskPoints.get(position), (String) adapter.getItem(position));
+            detailDialog.setOnSaveClickListener((latLngDto) -> {
+                if (latLngDto != null) {
+                    taskPoints.set(position, latLngDto);
+                }
+            });
+            detailDialog.show();
+        });
+        recyclerViewAdapter.setOnItemLongClickListener((adapter, view, position) -> {
+                    ConfirmDialog deleteTaskDialog = new ConfirmDialog(this, DELTASK, "删除任务点", "确定删除任务点？", false, position);
+                    deleteTaskDialog.show();
+                    return true;
+                }
+        );
+        recyclerView.setAdapter(recyclerViewAdapter);
 
         btn_add_task = findViewById(R.id.btn_add_task);
         btn_add_task.setOnClickListener(this);
@@ -219,17 +262,27 @@ public class TaskActivity extends AppCompatActivity implements View.OnClickListe
         if (event.getWhich() == DialogAction.POSITIVE) {
             if (event.getCalledByViewId() == ADDTASK) {
                 Intent intent = new Intent();
-                if (polyLinePoints.size() > 2) {
-                    intent.putExtra("polyLinePoints", JsonUtils.toJson(polyLinePoints));
+                if (taskPoints.size() > 2) {
+                    intent.putExtra("polyLinePoints", JsonUtils.toJson(taskPoints));
                     setResult(TaskActivity.RESULT_OK, intent);
                 }
                 finish();
+            } else if (event.getCalledByViewId() == DELTASK) {
+                if (!StringUtils.isEmpty(resultValue)) {
+                    runOnUiThread(() -> {
+                        taskPoints.remove(Integer.parseInt(resultValue));
+                        updateShowLines(Integer.parseInt(resultValue));
+                        recyclerViewAdapter.notifyDataSetChanged();
+                    });
+                }
+                Log.i(TAG, "operationResult: " + resultValue);
             }
         }
     }
 
     public void updateShowLines(LatLng latLng) {
         polyLinePoints.add(latLng);
+        taskPoints.add(new LatLngDto(latLng.latitude, latLng.longitude, 10, 5, 0, 0, Float.NaN));
         /*if (currentMarker != null) {
             currentMarker.remove();
         }*/
@@ -248,5 +301,29 @@ public class TaskActivity extends AppCompatActivity implements View.OnClickListe
             mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLngZoom(polyLinePoints.get(0), 19.0f));
             zoomFlag = !zoomFlag;
         }*/
+        if (recyclerView.getVisibility() == View.GONE) {
+            recyclerView.setVisibility(View.VISIBLE);
+        }
+        data.add("任务点" + polyLinePoints.size());
+        recyclerViewAdapter.notifyDataSetChanged();
+    }
+    public void updateShowLines(int position) {
+        //mBaiduMap.clear();
+        //currentMarker = (Marker) mBaiduMap.addOverlay(options);
+        polyLinePoints.remove(position);
+        if (polyLinePoints.size() == 1) {
+            mBaiduMap.clear();
+        } else if (polyLinePoints.size() > 2) {
+            polylineOptions.points(polyLinePoints);
+            mBaiduMap.addOverlay(polylineOptions);
+        }
+        mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLngZoom(polyLinePoints.get(0), 19.0f));
+        /*if (zoomFlag) {
+            mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLngZoom(polyLinePoints.get(0), 19.0f));
+            zoomFlag = !zoomFlag;
+        }*/
+        if (recyclerView.getVisibility() == View.GONE) {
+            recyclerView.setVisibility(View.VISIBLE);
+        }
     }
 }

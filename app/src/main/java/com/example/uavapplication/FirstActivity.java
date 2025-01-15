@@ -16,18 +16,26 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import com.example.uavapplication.constant.SpConstant;
+import com.example.uavapplication.http.Constant;
+import com.example.uavapplication.http.HttpUtils;
+import com.example.uavapplication.http.OnHttpCallback;
+import com.example.uavapplication.model.Result;
 import com.example.uavapplication.model.UavEntity;
+import com.example.uavapplication.model.UavVehicleInfo;
 import com.example.uavapplication.utils.JsonUtils;
 import com.example.uavapplication.utils.SPUtils;
 import com.example.uavapplication.websocket.WebSocketService;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class FirstActivity extends AppCompatActivity {
+public class FirstActivity extends AppCompatActivity implements OnHttpCallback {
     private static final String TAG = "FirstActivity";
+    private static final int UAV_LIST = 1;
     private Toolbar toolbar;
     private AlertDialog dialog;
     private Intent bindIntent;
@@ -36,10 +44,12 @@ public class FirstActivity extends AppCompatActivity {
     private static final long HEART_BEAT_RATE = 60 * 1000;
     private Handler handler = new Handler();
     private static List<UavEntity> uavList = new ArrayList<>(Arrays.asList(
-            new UavEntity(1, "设备1", "223.112.179.125", "29031", 0),
-            new UavEntity(2, "设备2", "10.1.2.45", "28080", 1)
+            new UavEntity(1, "设备1-223", "223.112.179.125", "29031", 0),
+            new UavEntity(2, "设备2-192", "192.168.1.45", "28080", 0),
+            new UavEntity(3, "设备3-10", "10.1.2.45", "28080", 0)
     ));
-
+    private int total = 0;
+    List<UavVehicleInfo> options = new ArrayList<>();;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -49,16 +59,26 @@ public class FirstActivity extends AppCompatActivity {
         initView();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        initData();
+    }
+
+    private void initData() {
+        HttpUtils.Instance().get(Constant.API.UAV_LIST.getUrl(this), this, UAV_LIST, this);
+    }
+
     private void initView() {
         toolbar = findViewById(R.id.toolbar);
         //toolbar.inflateMenu(R.menu.main_toolbar);
         toolbar.getMenu().clear();
-        addDevices(toolbar);
+        //addDevices(toolbar);
         toolbar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
                 Intent intent = new Intent(FirstActivity.this, MainActivity.class);
-                UavEntity uav = uavList.stream().filter(uavEntity -> uavEntity.getId() == item.getItemId()).collect(Collectors.toList()).get(0);
+                UavVehicleInfo uav = options.stream().filter(uavVehicleInfo -> uavVehicleInfo.getVehicleId() == item.getItemId()).collect(Collectors.toList()).stream().findFirst().get();
                 intent.putExtra("uav", uav);
                 startActivity(intent);
                 finish();
@@ -69,12 +89,12 @@ public class FirstActivity extends AppCompatActivity {
     }
 
     private void addDevices(Toolbar toolbar) {
-        for (int i = 0; i < uavList.size(); i++) {
-            MenuItem menuItem = toolbar.getMenu().add(0, uavList.get(i).getId(), i, uavList.get(i).getName());
-            if (uavList.get(i).getStatus() == 1) {
-                menuItem.setIcon(R.drawable.ic_status_red).setEnabled(false);
-            } else {
+        for (UavVehicleInfo vehicleInfo : options) {
+            MenuItem menuItem = toolbar.getMenu().add(0, vehicleInfo.getVehicleId().intValue(), vehicleInfo.getVehicleId().intValue(), vehicleInfo.getVehicleName());
+            if ("1".equals(vehicleInfo.getVehicleStatus())) {
                 menuItem.setIcon(R.drawable.ic_status_green);
+            } else {
+                menuItem.setIcon(R.drawable.ic_status_red).setEnabled(false);
             }
         }
     }
@@ -144,4 +164,28 @@ public class FirstActivity extends AppCompatActivity {
         super.onDestroy();
     }
 
+    @Override
+    public void onFailure(IOException e, int id, int error) {
+
+    }
+
+    @Override
+    public void onResponse(Result result, int id) {
+        if (200 == (Integer) result.get("code")) {
+            List<LinkedHashMap> data = (List<LinkedHashMap>) result.get("rows");
+            if(options.size() > 0){
+                options.clear();
+            }
+            if (data != null && data.size() > 0) {
+                for (LinkedHashMap d : data) {
+                    UavVehicleInfo order = JsonUtils.toBean(d, UavVehicleInfo.class);
+                    options.add(order);
+                }
+                Log.i(TAG, "FirstActivity onResponse: " + options.toString());
+                runOnUiThread(() -> {
+                    addDevices(toolbar);
+                });
+            }
+        }
+    }
 }
