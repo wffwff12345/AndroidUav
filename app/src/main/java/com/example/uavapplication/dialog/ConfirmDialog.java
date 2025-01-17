@@ -1,6 +1,7 @@
 package com.example.uavapplication.dialog;
 
 import android.content.Context;
+import android.util.Log;
 
 import androidx.fragment.app.Fragment;
 
@@ -40,24 +41,30 @@ public class ConfirmDialog extends BaseDialog {
         initialize();
     }
 
+    public ConfirmDialog(Context context, int calledByViewId, String title, String content, boolean isSingleButton, int position) {
+        super(context);
+        this.context = context;
+        this.title = title;
+        this.content = content;
+        this.calledByViewId = calledByViewId;
+        this.isSingleButton = isSingleButton;
+        this.position = position;
+        initialize();
+    }
+
     public ConfirmDialog(Fragment fragment, int calledByViewId, String title, String content, boolean isSingleButton) {
         this(fragment.getActivity(), calledByViewId, title, content, isSingleButton);
         setResult(fragment);
     }
-
-    public ConfirmDialog(Context context, int calledByViewId, String title, String content, boolean isSingleButton, int position) {
-        this(context, calledByViewId, title, content, isSingleButton);
-        this.position = position;
-    }
-
     private void initialize() {
         title(title);
         content(content);
         positiveText("确定");
         if (position != -1) {
             onPositive((dialog, which) -> onResultClick(DialogAction.POSITIVE, String.valueOf(this.position)));
+        } else {
+            onPositive((dialog, which) -> onResultClick(DialogAction.POSITIVE));
         }
-        onPositive((dialog, which) -> onResultClick(DialogAction.POSITIVE));
         if (isSingleButton == false) {
             negativeText("取消");
             onNegative((dialog, which) -> onResultClick(DialogAction.NEGATIVE));

@@ -10,6 +10,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.WindowManager;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -89,6 +90,7 @@ public class FirstActivity extends AppCompatActivity implements OnHttpCallback {
     }
 
     private void addDevices(Toolbar toolbar) {
+        toolbar.getMenu().clear();
         for (UavVehicleInfo vehicleInfo : options) {
             MenuItem menuItem = toolbar.getMenu().add(0, vehicleInfo.getVehicleId().intValue(), vehicleInfo.getVehicleId().intValue(), vehicleInfo.getVehicleName());
             if ("1".equals(vehicleInfo.getVehicleStatus())) {

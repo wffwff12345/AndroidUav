@@ -520,7 +520,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 ToastUtils.toast(this, item.getTitle().toString());
                 break;
             case R.id.nav_task5:
-                ToastUtils.toast(this, item.getTitle().toString());
+                sendMsg("MODE#" + 3);
                 Intent intent = new Intent(MainActivity.this, TaskActivity.class);
                 intent.putExtra("startPoint", startPoint);
                 //startActivity(intent);
@@ -684,7 +684,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.btn_way_point:
                 if (polyLinePoints != null && !polyLinePoints.isEmpty() && polyLinePoints.size() > 2) {
-                    mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLngZoom(polyLinePoints.get(0), 19.0f));
+                    mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLngZoom(polyLinePoints.get(polyLinePoints.size()-1), 19.0f));
                 } else if (startPoint != null) {
                     mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLngZoom(startPoint, 19.0f));
                 }
@@ -959,7 +959,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mBaiduMap.clear();
         currentMarker = (Marker) mBaiduMap.addOverlay(options);
         mBaiduMap.addOverlay(polylineOptions);
-        mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLngZoom(polyLinePoints.get(0), 19.0f));
+        mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLngZoom(polyLinePoints.get(polyLinePoints.size()-1), 19.0f));
         /*if (zoomFlag) {
             mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLngZoom(polyLinePoints.get(0), 19.0f));
             zoomFlag = !zoomFlag;
@@ -999,12 +999,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             int x = screenWidth - compassWidth - 50; // 50 是额外的边距
             int y = screenHeight / 2;
             Log.i(TAG, "flag mapCompass: screenWidth: " + screenWidth + "  compassWidth: " + compassWidth + " x: " + x + " y: " + y);
-            mBaiduMap.setCompassPosition(new Point(x, y - 240));
+            //mBaiduMap.setCompassPosition(new Point(x, y - 240));
+            mBaiduMap.setCompassPosition(new Point(screenWidth - 40, y - 240));
         } else {
             int x = screenWidth - compassWidth - 50; // 50 是额外的边距
             int y = screenHeight / 2;
             Log.i(TAG, "!flag mapCompass: screenWidth: " + screenWidth + "  compassWidth: " + compassWidth + " x: " + x + " y: " + y);
-            mBaiduMap.setCompassPosition(new Point(x - 250, y - 240));
+            //mBaiduMap.setCompassPosition(new Point(x - 250, y - 240));
+            mBaiduMap.setCompassPosition(new Point(screenWidth - 340, y - 240));
+
         }
     }
 

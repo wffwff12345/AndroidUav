@@ -3,16 +3,14 @@ package com.example.uavapplication;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.Point;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.res.ResourcesCompat;
@@ -37,6 +35,15 @@ import com.example.uavapplication.dialog.TaskDetailDialog;
 import com.example.uavapplication.model.LatLngDto;
 import com.example.uavapplication.utils.JsonUtils;
 import com.example.uavapplication.utils.StringUtils;
+import com.google.android.libraries.remixer.Remixer;
+import com.google.android.libraries.remixer.annotation.BooleanVariableMethod;
+import com.google.android.libraries.remixer.annotation.ColorListVariableMethod;
+import com.google.android.libraries.remixer.annotation.RangeVariableMethod;
+import com.google.android.libraries.remixer.annotation.RemixerBinder;
+import com.google.android.libraries.remixer.storage.LocalStorage;
+import com.google.android.libraries.remixer.ui.RemixerInitialization;
+import com.google.android.libraries.remixer.ui.view.RemixerFragment;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.xiasuhuei321.loadingdialog.view.LoadingDialog;
 
 import org.greenrobot.eventbus.EventBus;
@@ -89,6 +96,7 @@ public class TaskActivity extends AppCompatActivity implements View.OnClickListe
     private LinearLayout task_layout;
 
     private List<LatLngDto> taskPoints = new ArrayList<>();
+    private FloatingActionButton floatingActionButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -154,6 +162,11 @@ public class TaskActivity extends AppCompatActivity implements View.OnClickListe
         mBaiduMap.setMapType(BaiduMap.MAP_TYPE_SATELLITE);
         ld = new LoadingDialog(this);
         ld.setLoadingText("地图加载中！").show();
+        floatingActionButton = findViewById(R.id.fab_btn);
+        RemixerInitialization.initRemixer(getApplication());
+        Remixer.getInstance().setSynchronizationMechanism(new LocalStorage(getApplication()));
+        RemixerBinder.bind(this);
+        RemixerFragment.newInstance().attachToFab(this, floatingActionButton);
     }
 
     @Override
@@ -164,7 +177,9 @@ public class TaskActivity extends AppCompatActivity implements View.OnClickListe
         mBaiduMap.setMapStatus(MapStatusUpdateFactory.newMapStatus(builder.build()));
         mBaiduMap.setMyLocationEnabled(true);
         mapCompass(true);
-        initShowLines();
+        if (polyLinePoints.size() == 0) {
+            initShowLines();
+        }
         mMapView.onResume();
     }
 
@@ -205,7 +220,7 @@ public class TaskActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.btn_task_way_point:
                 if (polyLinePoints != null && !polyLinePoints.isEmpty() && polyLinePoints.size() > 2) {
-                    mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLngZoom(polyLinePoints.get(0), 19.0f));
+                    mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLngZoom(polyLinePoints.get(polyLinePoints.size() - 1), 19.0f));
                 } else if (startPoint != null) {
                     mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLngZoom(startPoint, 19.0f));
                 }
@@ -232,12 +247,14 @@ public class TaskActivity extends AppCompatActivity implements View.OnClickListe
             int x = screenWidth - compassWidth - 50; // 50 是额外的边距
             int y = screenHeight / 2;
             Log.i(TAG, "flag mapCompass: screenWidth: " + screenWidth + "  compassWidth: " + compassWidth + " x: " + x + " y: " + y);
-            mBaiduMap.setCompassPosition(new Point(x, y - 240));
+//            mBaiduMap.setCompassPosition(new Point(x, y - 240));
+            mBaiduMap.setCompassPosition(new Point(screenWidth - 40, y - 240));
+
         } else {
             int x = screenWidth - compassWidth - 50; // 50 是额外的边距
             int y = screenHeight / 2;
             Log.i(TAG, "!flag mapCompass: screenWidth: " + screenWidth + "  compassWidth: " + compassWidth + " x: " + x + " y: " + y);
-            mBaiduMap.setCompassPosition(new Point(x - 250, y - 240));
+            mBaiduMap.setCompassPosition(new Point(screenWidth - 20, y - 200));
         }
     }
 
@@ -270,12 +287,16 @@ public class TaskActivity extends AppCompatActivity implements View.OnClickListe
             } else if (event.getCalledByViewId() == DELTASK) {
                 if (!StringUtils.isEmpty(resultValue)) {
                     runOnUiThread(() -> {
-                        taskPoints.remove(Integer.parseInt(resultValue));
-                        updateShowLines(Integer.parseInt(resultValue));
+                        int position = Integer.parseInt(resultValue);
+                        taskPoints.remove(position);
+                        updateShowLines(position);
+                        data.remove(position);
+                        for (int i = position; i < data.size(); i++) {
+                            data.set(i, "任务点" + (i + 1));
+                        }
                         recyclerViewAdapter.notifyDataSetChanged();
                     });
                 }
-                Log.i(TAG, "operationResult: " + resultValue);
             }
         }
     }
@@ -291,12 +312,12 @@ public class TaskActivity extends AppCompatActivity implements View.OnClickListe
         //currentMarker = (Marker) mBaiduMap.addOverlay(options);
         if (polyLinePoints.size() == 1) {
             mBaiduMap.clear();
-        } else if (polyLinePoints.size() > 2) {
+        } else if (polyLinePoints.size() >= 2) {
             polylineOptions.points(polyLinePoints);
             mBaiduMap.addOverlay(polylineOptions);
         }
         mBaiduMap.addOverlay(options);
-        mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLngZoom(polyLinePoints.get(0), 19.0f));
+        mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLngZoom(polyLinePoints.get(polyLinePoints.size() - 1), 19.0f));
         /*if (zoomFlag) {
             mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLngZoom(polyLinePoints.get(0), 19.0f));
             zoomFlag = !zoomFlag;
@@ -307,23 +328,62 @@ public class TaskActivity extends AppCompatActivity implements View.OnClickListe
         data.add("任务点" + polyLinePoints.size());
         recyclerViewAdapter.notifyDataSetChanged();
     }
+
     public void updateShowLines(int position) {
         //mBaiduMap.clear();
         //currentMarker = (Marker) mBaiduMap.addOverlay(options);
         polyLinePoints.remove(position);
-        if (polyLinePoints.size() == 1) {
-            mBaiduMap.clear();
-        } else if (polyLinePoints.size() > 2) {
+        mBaiduMap.clear();
+        polylineOptions = new PolylineOptions().width(5).color(ResourcesCompat.getColor(getResources(), R.color.colorPrimary, null)).dottedLine(false).clickable(false).focus(false);
+        for (LatLng latLng : polyLinePoints) {
+            options = new MarkerOptions().icon(resizedDescriptor).position(latLng).anchor(0.5f, 0.5f);
+            mBaiduMap.addOverlay(options);
+        }
+        if (polyLinePoints.size() > 2) {
             polylineOptions.points(polyLinePoints);
             mBaiduMap.addOverlay(polylineOptions);
         }
-        mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLngZoom(polyLinePoints.get(0), 19.0f));
-        /*if (zoomFlag) {
-            mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLngZoom(polyLinePoints.get(0), 19.0f));
-            zoomFlag = !zoomFlag;
-        }*/
+        if (!polyLinePoints.isEmpty()) {
+            mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLngZoom(polyLinePoints.get(polyLinePoints.size() - 1), 19.0f));
+        }
         if (recyclerView.getVisibility() == View.GONE) {
             recyclerView.setVisibility(View.VISIBLE);
         }
+
+    }
+
+    @RangeVariableMethod(minValue = 6, maxValue = 70, initialValue = 20)
+    public void setLabelSize(Float fontSize) {
+        //indicator.setLabelSize(fontSize);
+    }
+
+    @BooleanVariableMethod(initialValue = true)
+    public void showLabels(Boolean showLabels) {
+        //indicator.showLabels(showLabels);
+    }
+
+    @BooleanVariableMethod
+    public void showStepNumberInstead(Boolean showStepNumberInstead) {
+        //indicator.showStepNumberInstead(showStepNumberInstead);
+    }
+
+    @BooleanVariableMethod
+    public void useBottomIndicator(Boolean useBottomIndicator) {
+        //indicator.useBottomIndicator(useBottomIndicator);
+    }
+
+    @ColorListVariableMethod(limitedToValues = {0xFF00b47c, 0xFF3f51b5, 0xFFf44336})
+    public void setIndicatorColor(Integer indicatorColor) {
+        //indicator.setIndicatorColor(indicatorColor);
+    }
+
+    @ColorListVariableMethod(limitedToValues = {0xFF00b47c, 0xFF3f51b5, 0xFFf44336})
+    public void setLineDoneColor(Integer lineDoneColor) {
+        //indicator.setLineDoneColor(lineDoneColor);
+    }
+
+    @ColorListVariableMethod(limitedToValues = {Color.BLACK, Color.WHITE, 0xFF00b47c, 0xFF3f51b5, 0xFFf44336})
+    public void setLabelColor(Integer labelColor) {
+        //indicator.setLabelColor(labelColor);
     }
 }

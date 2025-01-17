@@ -9,12 +9,10 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.ctc.wstx.util.StringUtil;
 import com.example.uavapplication.R;
 import com.example.uavapplication.model.LatLngDto;
 import com.example.uavapplication.utils.StringUtils;

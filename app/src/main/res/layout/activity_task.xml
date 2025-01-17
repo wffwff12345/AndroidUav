@@ -3,7 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".TaskActivity">
+    tools:context=".TaskActivity"
+    tools:ignore="MissingClass">
 
     <Button
         android:id="@+id/btn_task_back"
@@ -33,19 +34,19 @@
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv"
-        android:layout_width="160dp"
+        android:layout_width="200dp"
         android:layout_height="wrap_content"
         android:layout_centerVertical="true"
         android:layout_toLeftOf="@+id/task_layout"
         android:layout_marginRight="20dp"
         android:alpha="0.8"
-        android:background="@color/gray"
+        android:background="@drawable/bg_task_shape"
         android:visibility="gone" />
 
     <LinearLayout
         android:id="@+id/task_layout"
         android:layout_width="50dp"
-        android:layout_height="140dp"
+        android:layout_height="wrap_content"
         android:layout_alignParentRight="true"
         android:layout_centerVertical="true"
         android:layout_marginRight="20dp"
@@ -71,4 +72,13 @@
             android:background="@drawable/ic_way_point2"
             android:textColor="@color/white" />
     </LinearLayout>
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginRight="16dp"
+        android:layout_marginBottom="16dp"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:src="@mipmap/edit" />
 </RelativeLayout>

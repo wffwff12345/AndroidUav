@@ -66,4 +66,6 @@ dependencies {
     implementation 'androidx.recyclerview:recyclerview:1.1.0'
     implementation 'com.github.CymChad:BaseRecyclerViewAdapterHelper:3.0.4'
     implementation 'org.apache.commons:commons-lang3:3.8.1'
+    implementation 'com.github.material-foundation.material-remixer-android:remixer:1.0'
+    annotationProcessor 'com.github.material-foundation.material-remixer-android:remixer_annotation:1.0'
 }
